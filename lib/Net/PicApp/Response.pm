@@ -1,12 +1,13 @@
 package Net::PicApp::Response;
 
 use strict;
+use Net::PicApp::Image;
 
 # use 'our' on v5.6.0
 use vars qw(@EXPORT_OK %EXPORT_TAGS);
 
 use base qw(Class::Accessor);
-Net::PicApp::Response->mk_accessors(qw( total_records record_count error_message images rss_link ));
+Net::PicApp::Response->mk_accessors(qw( total_records record_count error_message images rss_link url_queried ));
 
 # We are exporting functions
 use base qw/Exporter/;
@@ -16,9 +17,13 @@ sub init {
     my ($xml) = @_;
     $self->total_records($xml->{totalRecords});
     $self->rss_link($xml->{rssLink});
-    my @images = @{$xml->{ImageInfo}};
-    $self->record_count($#images + 1);
+    my @infos = @{$xml->{ImageInfo}};
+    my @images;
+    foreach (@infos) {
+        push @images, Net::PicApp::Image->new($_);
+    }
     $self->images(\@images);
+    $self->record_count($#infos + 1);
     return $self;
 }
 

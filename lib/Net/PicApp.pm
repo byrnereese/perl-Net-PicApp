@@ -5,6 +5,7 @@ use vars qw($VERSION @EXPORT_OK %EXPORT_TAGS $DEBUG);
 use XML::Simple;
 use LWP::UserAgent;
 use Net::PicApp::Response;
+use URI::Escape;
 
 $DEBUG = 0;
 $VERSION = '0.1';
@@ -75,19 +76,19 @@ sub search {
     my $method;
     if ($options->{'with_thumbnails'}) {
         if ($options->{'subcategory'} || $options->{'contributor'}) {
-            $method = 'SearchImagesWithThumbnailsContributerAndSubCategory';
+            $method = 'SearchImagesWithThumbnailsContributorAndSubCategory';
         } else {
             $method = 'SearchImagesWithThumbnails';
         }
     } else {
         if ($options->{'subcategory'} || $options->{'contributor'}) {
-            $method = 'SearchWithContributerAndSubCategory';
+            $method = 'SearchWithContributorAndSubCategory';
         } else {
             $method = 'Search';
         }
     }
     my $url = $self->url . "/".$method."?ApiKey=" . $self->apikey;
-    $url .= '&term=' . $term;
+    $url .= '&term=' . uri_escape($term);
     my $keys = {
         'categories' => 'cats',
         'colors' => 'clrs',
@@ -96,7 +97,7 @@ sub search {
         'match_phrase' => 'mp',
         'post' => 'post',
         'sort' => 'sort',
-        'page' => 'page',
+        'page' => 'Page',
         'total_records' => 'totalRecords',
     };
     foreach my $key (keys %$keys) {
@@ -114,6 +115,7 @@ sub search {
 
     require Net::PicApp::Response;
     my $response = Net::PicApp::Response->new;
+    $response->url_queried($url);
 
     # Call PicApp
     my $req = HTTP::Request->new(GET => $url);
@@ -121,7 +123,10 @@ sub search {
 
     # Check the outcome of the response
     if ($res->is_success) {
-        my $xml = eval { XMLin($res->content) };
+        my $content = $res->content;
+        # Hack to clean results
+#        $content =~ s/<!\[CDATA\[missing thumbnails\]\]>//gm;
+        my $xml = eval { XMLin($content) };
         if ($@) {
             print STDERR "ERROR: $@\n";
             $response->error_message("Could not parse response: $@");

@@ -6,7 +6,7 @@ use strict;
 @EXPORT_OK = qw( apikey );
 
 sub apikey {
-    open FILE,'./api.key';
+    open FILE,'./t/api.key' or die "Could not open api.key: $!";
     my @lines = <FILE>;
     close FILE;
     return $lines[0];
