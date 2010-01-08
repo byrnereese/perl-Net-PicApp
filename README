@@ -19,6 +19,9 @@ EXAMPLE
 
 my $pa = Net::PicApp->new();
 my $results = $pa->search("cats");
+foreach my $img (@{$results->images}) {
+   print $img->imageTitle . "\n";
+}
 
 LICENSE
 

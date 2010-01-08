@@ -154,6 +154,13 @@ Net::PicApp - A toolkit for interacting with the PicApp service.
     apikey => '4d8c591b-e2fc-42d2-c7d1-xxxabc00d000'
    });
    my $response = $picapp->search('cats');
+   if ($response->is_success) {
+     foreach my $img (@{$response->images}) {
+       print $img->imageTitle . "\n";
+     }
+   } else {
+     die $picapp->error_message;
+   }
    
 =head1 DESCRIPTION
 
