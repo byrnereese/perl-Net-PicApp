@@ -7,7 +7,7 @@ use LWP::UserAgent;
 use Net::PicApp::Response;
 use URI::Escape;
 
-$DEBUG = 0;
+$DEBUG   = 0;
 $VERSION = '0.1';
 
 use base qw(Class::Accessor);
@@ -17,22 +17,22 @@ Net::PicApp->mk_accessors(qw(apikey url));
 use base qw/Exporter/;
 
 use constant {
-    CONTRIB_CORBIS => 466,
+    CONTRIB_CORBIS              => 466,
     CONTRIB_ENTERTAINMENT_PRESS => 16797,
-    CONTRIB_GETTY => 3,
-    CONTRIB_IMAGE_SOURCE => 4,
-    CONTRIB_JUPITER => 5,
-    CONTRIB_NEWSCOM => 7387,
-    CONTRIB_PACIFIC_COAST => 12342,
-    CONTRIB_SPLASH => 4572,
-    CAT_EDITORIAL => 2,
-    CAT_CREATIVE => 3,
-    CAT_ENTERTAINMENT => 4,
-    CAT_NEWS => 5,
-    CAT_SPORTS => 6,
-    SORT_RELEVANT => 1,
-    SORT_RECENT => 2,
-    SORT_RANDOM => 6
+    CONTRIB_GETTY               => 3,
+    CONTRIB_IMAGE_SOURCE        => 4,
+    CONTRIB_JUPITER             => 5,
+    CONTRIB_NEWSCOM             => 7387,
+    CONTRIB_PACIFIC_COAST       => 12342,
+    CONTRIB_SPLASH              => 4572,
+    CAT_EDITORIAL               => 2,
+    CAT_CREATIVE                => 3,
+    CAT_ENTERTAINMENT           => 4,
+    CAT_NEWS                    => 5,
+    CAT_SPORTS                  => 6,
+    SORT_RELEVANT               => 1,
+    SORT_RECENT                 => 2,
+    SORT_RANDOM                 => 6
 };
 
 # Methods to support:
@@ -48,19 +48,20 @@ sub DESTROY { }
 
 $SIG{INT} = sub { die "Interrupted\n"; };
 
-$| = 1;  # autoflush
+$| = 1;    # autoflush
 
 sub new {
-    my $class = shift;
+    my $class  = shift;
     my $params = shift;
-    my $self = {};
-    foreach my $prop ( qw/ apikey / ) {
-        if ( exists $params->{ $prop } ) {
-            $self->{ $prop } = $params->{ $prop };
+    my $self   = {};
+    foreach my $prop (qw/ apikey /) {
+        if ( exists $params->{$prop} ) {
+            $self->{$prop} = $params->{$prop};
         }
-#        else {
-#            confess "You need to provide the $prop parameter!";
-#        }
+
+        #        else {
+        #            confess "You need to provide the $prop parameter!";
+        #        }
     }
     my $ua = LWP::UserAgent->new;
     $ua->agent("Net::PicApp/$VERSION");
@@ -72,44 +73,51 @@ sub new {
 
 sub search {
     my $self = shift;
-    my ($term, $options) = @_;
+    my ( $term, $options ) = @_;
     my $method;
-    if ($options->{'with_thumbnails'}) {
-        if ($options->{'subcategory'} || $options->{'contributor'}) {
+    if ( $options->{'with_thumbnails'} ) {
+        if ( $options->{'subcategory'} || $options->{'contributor'} ) {
             $method = 'SearchImagesWithThumbnailsContributorAndSubCategory';
-        } else {
+        }
+        else {
             $method = 'SearchImagesWithThumbnails';
         }
-    } else {
-        if ($options->{'subcategory'} || $options->{'contributor'}) {
+    }
+    else {
+        if ( $options->{'subcategory'} || $options->{'contributor'} ) {
             $method = 'SearchWithContributorAndSubCategory';
-        } else {
+        }
+        else {
             $method = 'Search';
         }
     }
-    my $url = $self->url . "/".$method."?ApiKey=" . $self->apikey;
+    my $url = $self->url . "/" . $method . "?ApiKey=" . $self->apikey;
     $url .= '&term=' . uri_escape($term);
     my $keys = {
-        'categories' => 'cats',
-        'colors' => 'clrs',
-        'orientation' => 'oris',
-        'types' => 'types',
-        'match_phrase' => 'mp',
-        'post' => 'post',
-        'sort' => 'sort',
-        'page' => 'Page',
+        'categories'    => 'cats',
+        'colors'        => 'clrs',
+        'orientation'   => 'oris',
+        'types'         => 'types',
+        'match_phrase'  => 'mp',
+        'post'          => 'post',
+        'sort'          => 'sort',
+        'page'          => 'Page',
         'total_records' => 'totalRecords',
     };
-    foreach my $key (keys %$keys) {
-        $url .= '&'.$keys->{$key}.'=' . ($options->{$key} ? $options->{$key} : '');
+    foreach my $key ( keys %$keys ) {
+        $url .= '&'
+          . $keys->{$key} . '='
+          . ( $options->{$key} ? $options->{$key} : '' );
     }
-    if ($method =~ /(contributor|category)/i) {
+    if ( $method =~ /(contributor|category)/i ) {
         $keys = {
             'contributor' => 'contributorId',
             'subcategory' => 'subCategory'
         };
-        foreach my $key (keys %$keys) {
-            $url .= '&'.$keys->{$key}.'=' . ($options->{$key} ? $options->{$key} : '');
+        foreach my $key ( keys %$keys ) {
+            $url .= '&'
+              . $keys->{$key} . '='
+              . ( $options->{$key} ? $options->{$key} : '' );
         }
     }
 
@@ -118,19 +126,21 @@ sub search {
     $response->url_queried($url);
 
     # Call PicApp
-    my $req = HTTP::Request->new(GET => $url);
+    my $req = HTTP::Request->new( GET => $url );
     my $res = $self->{ua}->request($req);
 
     # Check the outcome of the response
-    if ($res->is_success) {
+    if ( $res->is_success ) {
         my $content = $res->content;
+
         # Hack to clean results
-#        $content =~ s/<!\[CDATA\[missing thumbnails\]\]>//gm;
+        #        $content =~ s/<!\[CDATA\[missing thumbnails\]\]>//gm;
         my $xml = eval { XMLin($content) };
         if ($@) {
             print STDERR "ERROR: $@\n";
             $response->error_message("Could not parse response: $@");
-        } else {
+        }
+        else {
             print STDERR "Success!\n";
             $response->init($xml);
         }
