@@ -1,12 +1,9 @@
 
-XML::Sig -- a module for creating and verifying XML Digital Signatures
+Net::PicApp -- a module for interacting with the PicApp web service.
 
 	Copyright (c) 2009 Byrne Reese. All rights reserved.
 	This program is free software; you can redistribute it and/or
 	modify it under the same terms as Perl itself.
-
-	This module borrows heavily from Google::SAML::Response 
-        (c) 2009 Manni Heumann.
 
 To install this module, please run:
 
@@ -16,16 +13,12 @@ To install this module, please run:
 	make install
 
 For more information on the module, please see the POD documentation
-inside Sig.pm. ("perldoc XML::Sig", once it is installed.)
+inside PicApp.pm. ("perldoc Net::PicApp", once it is installed.)
 
 EXAMPLE 
 
-my $sig = XML::Sig->new();
-if ($sig->verify($saml)) {
-    print "SAML document is VALID.\n"
-} else {
-    print "Ug. SAML document is NOT valid.\n"
-}
+my $pa = Net::PicApp->new();
+my $results = $pa->search("cats");
 
 LICENSE
 
