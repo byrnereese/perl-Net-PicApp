@@ -3,7 +3,8 @@ package Net::PicApp;
 # use 'our' on v5.6.0
 use vars qw($VERSION @EXPORT_OK %EXPORT_TAGS $DEBUG);
 use XML::Simple;
-use LWP::Simple;
+use LWP::UserAgent;
+use Net::PicApp::Response;
 
 $DEBUG = 0;
 $VERSION = '0.1';
@@ -14,34 +15,31 @@ Net::PicApp->mk_accessors(qw(apikey url));
 # We are exporting functions
 use base qw/Exporter/;
 
-# Constants:
-#  Contributors
-#  466   Corbis
-#  16797 Entertainment Press
-#  3     Getty Images
-#  4     Image Source
-#  5     Jupiter Images
-#  7387  Newscom
-#  12342 Pacific Coast News
-#  4572  Splash News
-
-#  Categories
-#  2 Editorial
-#  3 Creative
-#  4 Entertainment
-#  5 News
-#  6 Sports
+use constant {
+    CONTRIB_CORBIS => 466,
+    CONTRIB_ENTERTAINMENT_PRESS => 16797,
+    CONTRIB_GETTY => 3,
+    CONTRIB_IMAGE_SOURCE => 4,
+    CONTRIB_JUPITER => 5,
+    CONTRIB_NEWSCOM => 7387,
+    CONTRIB_PACIFIC_COAST => 12342,
+    CONTRIB_SPLASH => 4572,
+    CAT_EDITORIAL => 2,
+    CAT_CREATIVE => 3,
+    CAT_ENTERTAINMENT => 4,
+    CAT_NEWS => 5,
+    CAT_SPORTS => 6,
+    SORT_RELEVANT => 1,
+    SORT_RECENT => 2,
+    SORT_RANDOM => 6
+};
 
 # Methods to support:
-# * Search
-# * SearchImagesWithThumbnails
-# * SearchWithContributorAndSubCategory
 # * getimagedetails
 # * login
-# * SearchImagesWithThumbnailsContributerAndSubCategory
 
 # Export list - to allow fine tuning of export table
-@EXPORT_OK = qw( search search_with_thumbnails get_image_details login );
+@EXPORT_OK = qw( search get_image_details login );
 
 use strict;
 
@@ -63,6 +61,10 @@ sub new {
 #            confess "You need to provide the $prop parameter!";
 #        }
     }
+    my $ua = LWP::UserAgent->new;
+    $ua->agent("Net::PicApp/$VERSION");
+    $self->{ua} = $ua;
+    $self->{url} = 'http://api.picapp.com/API/ws.asmx' unless $self->{url};
     bless $self, $class;
     return $self;
 }
@@ -70,19 +72,68 @@ sub new {
 sub search {
     my $self = shift;
     my ($term, $options) = @_;
-    my $url = $self->url . "/Search?ApiKey=" . $self->apikey;
+    my $method;
+    if ($options->{'with_thumbnails'}) {
+        if ($options->{'subcategory'} || $options->{'contributor'}) {
+            $method = 'SearchImagesWithThumbnailsContributerAndSubCategory';
+        } else {
+            $method = 'SearchImagesWithThumbnails';
+        }
+    } else {
+        if ($options->{'subcategory'} || $options->{'contributor'}) {
+            $method = 'SearchWithContributerAndSubCategory';
+        } else {
+            $method = 'Search';
+        }
+    }
+    my $url = $self->url . "/".$method."?ApiKey=" . $self->apikey;
     $url .= '&term=' . $term;
-    $url .= '&cats=' . $options{'categories'} if $options{'categories'};
-    $url .= '&clrs=' . $options{'colors'} if $options{'colors'};
-    $url .= '&oris=' . $options{'orientation'} if $options{'orientation'};
-    $url .= '&types=' . $options{'types'} if $options{'types'};
-    $url .= '&mp=' . $options{'match_phrase'} if $options{'match_phrase'};
-    $url .= '&post=' . $options{'time_period'} if $options{'time_period'};
-    $url .= '&sort=' . $options{'sort'} if $options{'sort'};
-    $url .= '&page=' . $options{'page'} if $options{'page'};
-    $url .= '&totalRecords=' . $options{'total_records'} if $options{'total_records'};
+    my $keys = {
+        'categories' => 'cats',
+        'colors' => 'clrs',
+        'orientation' => 'oris',
+        'types' => 'types',
+        'match_phrase' => 'mp',
+        'post' => 'post',
+        'sort' => 'sort',
+        'page' => 'page',
+        'total_records' => 'totalRecords',
+    };
+    foreach my $key (keys %$keys) {
+        $url .= '&'.$keys->{$key}.'=' . ($options->{$key} ? $options->{$key} : '');
+    }
+    if ($method =~ /(contributor|category)/i) {
+        $keys = {
+            'contributor' => 'contributorId',
+            'subcategory' => 'subCategory'
+        };
+        foreach my $key (keys %$keys) {
+            $url .= '&'.$keys->{$key}.'=' . ($options->{$key} ? $options->{$key} : '');
+        }
+    }
 
-    my $content = get($url);
+    require Net::PicApp::Response;
+    my $response = Net::PicApp::Response->new;
+
+    # Call PicApp
+    my $req = HTTP::Request->new(GET => $url);
+    my $res = $self->{ua}->request($req);
+
+    # Check the outcome of the response
+    if ($res->is_success) {
+        my $xml = eval { XMLin($res->content) };
+        if ($@) {
+            print STDERR "ERROR: $@\n";
+            $response->error_message("Could not parse response: $@");
+        } else {
+            print STDERR "Success!\n";
+            $response->init($xml);
+        }
+    }
+    else {
+        $response->error_message("Could not conduct query to: $url");
+    }
+    return $response;
 }
 
 1;
@@ -97,26 +148,30 @@ Net::PicApp - A toolkit for interacting with the PicApp service.
    my $picapp = Net::PicApp->new({
     apikey => '4d8c591b-e2fc-42d2-c7d1-xxxabc00d000'
    });
+   my $response = $picapp->search('cats');
    
 =head1 DESCRIPTION
+
+This module provides a convenient interface to the PicApp web service.
+It requires that you have been given an API Key by PicApp.
 
 =head1 PREREQUISITES
 
 =over
 
+=item PicApp API Key
+
 =item L<XML::Simple>
 
-=item L<LWP::Simple>
+=item L<LWP>
 
-=cut
+=back
 
 =head1 USAGE
 
-=cut
-
 =head2 METHODS
 
-=over
+=over 4
 
 =item B<search($terms, %options)>
 
@@ -125,39 +180,44 @@ This function allows the user to send search parameters in addition to the
 search term, corresponding to advanced search options in the www.picapp.com 
 website.
 
-Options:
+B<Search Options:>
 
-    * categories - Editorial or Creative
+=over 4
 
-    * colors - BW and/or Color
+=item C<with_thumbnails> - boolean
 
-    * orientation - Horizontal and/or Vertical and/or Panoramic
+=item C<categories> - "Editorial" or "Creative" (default: all)
 
-    * types - Photography and/or Illustration
+=item C<subcategory> - A sub-category by which to filter. See Constants.
 
-    * match_phrase - AllTheseWords or ExactPhrase or AnyTheseWords or FreeText
+=item C<colors> - "BW" or "Color" (default both)
 
-    * time_period - Today or Yesterday or Last3Days or LastWeek or LastMonth or Last3Months or Anytime
+=item C<orientation> - "Horizontal" or "Vertical" or "Panoramic" (default: all)
 
-    * sort - 1, 2, 6
+=item C<types> - "Photography" or "Illustration" (default: all)
 
-      1 = Most Relevant
-      2 = Most Recent
-      6 = Random
+=item C<match_phrase> - "AllTheseWords" or "ExactPhrase" or "AnyTheseWords" or "FreeText"
 
-    * page - This parameter depicts the page number (1 and above) to be retrieved from the system.
+=item C<time_period> - "Today" or "Yesterday" or "Last3Days" or "LastWeek" or "LastMonth" or "Last3Months" or "Anytime"
 
-    * total_records - This parameter indicates the maximal number of results requested from Picapp (1 and above).
+=item C<sort> - How to sort the results (by relevancy, by recency, or randomly). See Constants.
 
-=item B<search_with_thumbnails($terms, %options)>
+=item C<page> - This parameter depicts the page number (1 and above) to be retrieved from the system.
 
-This function retrieves the search results upon user definitions with extra 
-rectangular cropped thumbnails on top of the regular thumbnail.
+=item C<total_records> - This parameter indicates the maximal number of results requested from Picapp (1 and above).
 
-This function receives a term for searching and retrieves the results in XML.
-This function allows the user to send search parameters in addition to the 
-search term, corresponding to advanced search options in the www.picapp.com 
-website.
+=back
+
+B<Usage Notes:>
+
+If C<with_thumbnails> has been specified and is true, then this function will 
+retrieve the search results upon user definitions with extra rectangular 
+cropped thumbnails on top of the regular thumbnail. These thumbnails will be 
+available in the response object.
+
+If C<subcategory> OR C<contributor> has been specified then this function will 
+also filter the search results by image contributor (Getty, Corbis, Splash,
+ etc..) and by image category (news, creative, sports, etc..)
 
 =item B<get_image_details($id)>
 
@@ -177,34 +237,64 @@ find the image which is published.
 
 TODO: options
 
-=item B<search_with_contributor_and_sub_category(TODO)>
+=back
 
-This function receives a term for searching and retrieves the results in XML.
-This function allows the user to send search parameters in addition to the 
-search term.
+=head2 CONSTANTS
 
-The function also enables the search results to be filtered by image 
-contributor (Getty, Corbis, Splash, etc..) & by image category (news, 
-creative, sports, etc..)
+The following constants have been defined to assist in specifying the 
+appropriate values to a search request:
 
-TODO: options
+=head3 Contributors
 
-=item B<search_images_with_thumbnails_contributer_and_subcategory(TODO)>
+=over 4
 
-This function receives a term for searching and retrieves the results in XML.
-The image results are available with extra rectangular cropped thumbnails on 
-top of the regular thumbnail.
+=item CONTRIB_CORBIS
 
-This function allows the user to send search parameters in addition to the 
-search term.
+=item CONTRIB_ENTERTAINMENT_PRESS
 
-The function also enables the search results to be filtered by image 
-contributor (Getty, Corbis, Splash, etc..) & by image category (news, 
-creative, sports, etc..)
+=item CONTRIB_GETTY
 
-=cut
+=item CONTRIB_IMAGE_SOURCE
 
-=head2 OPTIONS
+=item CONTRIB_JUPITER
+
+=item CONTRIB_NEWSCOM
+
+=item CONTRIB_PACIFIC_COAST
+
+=item CONTRIB_SPLASH
+
+=back
+
+=head3 Sub-Categories
+
+=over 4
+
+=item CAT_EDITORIAL
+
+=item CAT_CREATIVE
+
+=item CAT_ENTERTAINMENT
+
+=item CAT_NEWS
+
+=item CAT_SPORTS
+
+=back
+
+=head3 Sort Values
+
+=over 4
+
+=item SORT_RELEVANT
+
+=item SORT_RECENT
+
+=item SORT_RANDOM
+
+=back
+
+=head2 INITIALIZATION OPTIONS
 
 Each of the following options are also accessors on the main
 Net::PicApp object.

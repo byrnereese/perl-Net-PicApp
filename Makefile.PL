@@ -1,6 +1,25 @@
 use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
+
+open FILE,'./t/api.key';
+my @lines = <FILE>;
+close FILE;
+my $default = $lines[0];
+my $key;
+if ($default) {
+    $key = prompt("Enter your PicApp API Key:",$default);
+} else {
+    $key = prompt("Enter your PicApp API Key:");
+    open FILE,'>./t/api.key';
+    print FILE $key;
+    close FILE;
+}
+
+unless ($key) {
+    die "You must provide the system will an API Key";
+}
+
 WriteMakefile(
     'NAME'	=> 'Net::PicApp',
     'VERSION_FROM'	=> 'lib/Net/PicApp.pm',
