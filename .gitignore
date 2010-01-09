@@ -1,3 +1,4 @@
+*.bak
 MANIFEST
 MANIFEST.bak
 Makefile
