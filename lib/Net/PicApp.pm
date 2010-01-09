@@ -127,11 +127,13 @@ sub search {
         }
     }
 
-    require Net::PicApp::Response;
     my $response;
     if ($self->cache) {
         $response = $self->cache->get($url);
-        return $response if $response;
+        if ($response) {
+            bless $response, 'Net::PicApp::Response';
+            return $response;
+        }
     }
 
     $response = Net::PicApp::Response->new;
@@ -150,7 +152,6 @@ sub search {
             $response->error_message("Could not parse response: $@");
         }
         else {
-            print STDERR "Success!\n";
             $response->init($xml);
         }
     }
@@ -158,9 +159,53 @@ sub search {
         $response->error_message("Could not conduct query to: $url");
     }
     if ($self->cache) {
-        $self->cache->set( $url, $response );
+        $self->cache->set( $url, %$response );
     }
     return $response;
+}
+
+sub get_image_details {
+    my $self = shift;
+    my ( $id ) = @_;
+    my $url = $self->url . "/GetImageDetails?ApiKey=" . $self->apikey;
+    $url .= '&ImageId=' . uri_escape($id);
+
+    my $response;
+    if ($self->cache) {
+        $response = $self->cache->get($url);
+        if ($response) {
+            bless $response, 'Net::PicApp::Response';
+            return $response;
+        }
+    }
+
+    $response = Net::PicApp::Response->new;
+    $response->url_queried($url);
+
+    # Call PicApp
+    my $req = HTTP::Request->new( GET => $url );
+    my $res = $self->{ua}->request($req);
+
+    # Check the outcome of the response
+    if ( $res->is_success ) {
+        my $content = $res->content;
+        my $xml = eval { XMLin($content) };
+        if ($@) {
+            print STDERR "ERROR: $@\n";
+            $response->error_message("Could not parse response: $@");
+        }
+        else {
+            $response->init($xml);
+        }
+    }
+    else {
+        $response->error_message("Could not conduct query to: $url");
+    }
+    if ($self->cache) {
+        $self->cache->set( $url, %$response );
+    }
+    return $response;
+   
 }
 
 1;

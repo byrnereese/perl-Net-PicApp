@@ -16,15 +16,32 @@ use base qw/Exporter/;
 sub init {
     my $self = shift;
     my ($xml) = @_;
-    $self->total_records( $xml->{totalRecords} );
-    $self->rss_link( $xml->{rssLink} );
-    my @infos = @{ $xml->{ImageInfo} };
-    my @images;
-    foreach (@infos) {
-        push @images, Net::PicApp::Image->new($_);
+    if ($self->url_queried =~ /getimagedetails/i) {
+        $self->total_records( 1 );
+        my $info = $xml->{ImageInfo};
+        my @infos;
+        if (ref $info eq 'ARRAY') {
+            @infos = @{ $info };
+        } else {
+            @infos = ( $info );
+        }
+        my @images;
+        foreach (@infos) {
+            push @images, Net::PicApp::Image->new($_);
+        }
+        $self->images( \@images );
+    } else {
+        # Its a search
+        $self->total_records( $xml->{totalRecords} );
+        $self->rss_link( $xml->{rssLink} );
+        my @infos = @{ $xml->{ImageInfo} };
+        my @images;
+        foreach (@infos) {
+            push @images, Net::PicApp::Image->new($_);
+        }
+        $self->images( \@images );
+        $self->record_count( $#infos + 1 );
     }
-    $self->images( \@images );
-    $self->record_count( $#infos + 1 );
     return $self;
 }
 
