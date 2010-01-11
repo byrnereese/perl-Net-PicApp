@@ -8,7 +8,7 @@ use vars qw(@EXPORT_OK %EXPORT_TAGS);
 
 use base qw(Class::Accessor);
 Net::PicApp::Response->mk_accessors(
-    qw( total_records record_count error_message images rss_link url_queried ));
+    qw( total_records record_count error_message rss_link url_queried ));
 
 # We are exporting functions
 use base qw/Exporter/;
@@ -29,7 +29,7 @@ sub init {
         foreach (@infos) {
             push @images, Net::PicApp::Image->new($_);
         }
-        $self->images( \@images );
+        $self->images( @images );
     } else {
         # Its a search
         $self->total_records( $xml->{totalRecords} );
@@ -39,10 +39,19 @@ sub init {
         foreach (@infos) {
             push @images, Net::PicApp::Image->new($_);
         }
-        $self->images( \@images );
+        $self->images( @images );
         $self->record_count( $#infos + 1 );
     }
     return $self;
+}
+
+sub images {
+    my $self = shift;
+    if ($_[0]) {
+        $self->{images} = \@_;
+    }
+    my @a = @{$self->{images}};
+    return wantarray ? @a : $a[0];
 }
 
 sub is_success {

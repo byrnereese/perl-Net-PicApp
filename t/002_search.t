@@ -25,6 +25,7 @@ print STDERR "Results: " . $response->record_count . "\n";
 print STDERR "Total: " . $response->total_records . "\n";
 
 my $c = 0;
-foreach my $i (@{$response->images}) {
+my @images = $response->images();
+foreach my $i (@images) {
     print STDERR ++$c . ". Image: " . $i->{imageTitle} . "\n";
 }
