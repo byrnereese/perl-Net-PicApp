@@ -3,7 +3,7 @@
 # t/002_search.t - check module loading
 
 use lib './t/';
-use Test::More tests => 2;
+use Test::More tests => 7;
 use TestUtil qw(apikey);
 
 my $key = apikey();
@@ -20,12 +20,11 @@ my $pa = Net::PicApp->new(
 my $response = $pa->search('cats');
 isa_ok($response,'Net::PicApp::Response');
 
-print STDERR "RSS: " . $response->rss_link . "\n";
-print STDERR "Results: " . $response->record_count . "\n";
-print STDERR "Total: " . $response->total_records . "\n";
+ok( $response->rss_link eq 'http://www.picapp.com/Feed/cats.rss' );
+ok( $response->record_count == 150 );
+ok( $response->total_records > 1 );
 
 my $c = 0;
 my @images = $response->images();
-foreach my $i (@images) {
-    print STDERR ++$c . ". Image: " . $i->{imageTitle} . "\n";
-}
+ok( @images );
+ok( $#images == 149 );

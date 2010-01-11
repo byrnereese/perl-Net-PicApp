@@ -50,7 +50,7 @@ sub images {
     if ($_[0]) {
         $self->{images} = \@_;
     }
-    my @a = @{$self->{images}};
+    my @a = $self->{images} ? @{$self->{images}} : ();
     return wantarray ? @a : $a[0];
 }
 

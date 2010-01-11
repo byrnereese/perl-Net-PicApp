@@ -128,12 +128,10 @@ sub search {
     }
 
     my $response;
-    if ($self->cache) {
-        $response = $self->cache->get($url);
-        if ($response) {
-            bless $response, 'Net::PicApp::Response';
-            return $response;
-        }
+    if ($self->cache && $self->cache->exists($url)) {
+        $response = $self->cache->thaw($url);
+        bless $response, 'Net::PicApp::Response';
+        return $response;
     }
 
     $response = Net::PicApp::Response->new;
@@ -159,7 +157,7 @@ sub search {
         $response->error_message("Could not conduct query to: $url");
     }
     if ($self->cache) {
-        $self->cache->set( $url, %$response );
+        $self->cache->freeze( $url, $response );
     }
     return $response;
 }
@@ -167,12 +165,14 @@ sub search {
 sub get_image_details {
     my $self = shift;
     my ( $id ) = @_;
+    die "No image id specified" unless $id;
+
     my $url = $self->url . "/GetImageDetails?ApiKey=" . $self->apikey;
     $url .= '&ImageId=' . uri_escape($id);
 
     my $response;
     if ($self->cache) {
-        $response = $self->cache->get($url);
+        $response = $self->cache->thaw($url);
         if ($response) {
             bless $response, 'Net::PicApp::Response';
             return $response;
@@ -201,8 +201,8 @@ sub get_image_details {
     else {
         $response->error_message("Could not conduct query to: $url");
     }
-    if ($self->cache) {
-        $self->cache->set( $url, %$response );
+    if ($self->cache && $response->is_success) {
+        $self->cache->freeze( $url, $response );
     }
     return $response;
    
