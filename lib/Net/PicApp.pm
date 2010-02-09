@@ -156,7 +156,7 @@ sub search {
     else {
         $response->error_message("Could not conduct query to: $url");
     }
-    if (!$options->{no_cache} && $self->cache && $response->is_success) {
+    if (!$options->{no_cache} && $self->cache && $response->is_success && $response->total_records > 0) {
         $self->cache->freeze( $url, $response );
     }
     return $response;
