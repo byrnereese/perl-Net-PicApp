@@ -20,11 +20,11 @@ my $pa = Net::PicApp->new(
 my $response = $pa->search('cats');
 isa_ok($response,'Net::PicApp::Response');
 
-ok( $response->rss_link eq 'http://www.picapp.com/Feed/cats.rss' );
-ok( $response->record_count == 150 );
-ok( $response->total_records > 1 );
+ok( $response->rss_link eq 'http://www.picapp.com/Feed/cats.rss', "RSS Link is correct?" );
+ok( $response->record_count == 200, "Record count is 200? " . $response->record_count );
+ok( $response->total_records > 1, "Total records > 1? " . $response->total_records );
 
 my $c = 0;
 my @images = $response->images();
 ok( @images );
-ok( $#images == 149 );
+ok( $#images == 199, "Number of images is 199? " . $#images );

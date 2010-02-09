@@ -3,7 +3,7 @@
 # t/003_image-details.t - check get image details
 
 use lib './t/';
-use Test::More tests => 5;
+use Test::More tests => 6;
 use TestUtil qw(apikey);
 
 my $key = apikey();
@@ -17,12 +17,13 @@ my $pa = Net::PicApp->new(
         apikey     => $key,
     }
 );
-my $response = $pa->get_image_details(6166715);
+my $response = $pa->get_image_details(93804);
 isa_ok($response,'Net::PicApp::Response');
 
 my $i = $response->images();
-ok( $i->{imageTitle} eq 'Furloughs' );
+isa_ok($i,"Net::PicApp::Image");
+ok( $i->{imageTitle} eq 'Siberian tiger walking in snow', "Image title is 'Siberian tiger walking in snow'?" . $i->{imageTitle} );
 
 my @keywords = $i->keywords();
 ok(@keywords);
-ok( $#keywords == 57 );
+ok( $#keywords == 19, "Keywords is 19? " . $#keywords );
