@@ -32,17 +32,9 @@ WriteMakefile(
     'INC'	=> '',     # e.g., '-I/usr/include/other' 
     'PREREQ_PM' => {
         'XML::Simple' => 0,
-#        'Test::Exception' => 0,
-#        'File::Which' => 0,
-#        'Class::Accessor' => 0,
-#        'XML::XPath' => 0,
-#        'Digest::SHA1' => 0,
-#        'MIME::Base64' => 0,
-#        'Crypt::OpenSSL::Bignum' => 0,
-#        'Crypt::OpenSSL::X509' => 0,
-#        'Crypt::OpenSSL::RSA' => 0,
-#        'Crypt::OpenSSL::DSA' => 0,
-#        'XML::CanonicalizeXML' => 0,
+        'LWP::UserAgent' => 0,
+        'URI::Escape' => 0,
+        'Class::Accessor' => 0
     },
 );
 __END__
