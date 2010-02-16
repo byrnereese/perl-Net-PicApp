@@ -8,7 +8,7 @@ use Net::PicApp::Response;
 use URI::Escape;
 
 $DEBUG   = 0;
-$VERSION = '0.2';
+$VERSION = '0.3';
 
 use base qw(Class::Accessor);
 Net::PicApp->mk_accessors(qw(apikey url cache));
